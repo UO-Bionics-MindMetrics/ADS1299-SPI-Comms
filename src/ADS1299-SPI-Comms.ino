@@ -16,7 +16,7 @@
   - add txt file creation/writing for data storage when operating through a computer
 */
 
-#include <ADS1299.h>
+#include "ADS1299.h"
 
 ADS1299 ADS;
 
@@ -33,16 +33,53 @@ ADS1299 ADS;
 boolean deviceIDReturned = false;
 boolean startedLogging = false;
 
-void setup() {
+void ADS_startup(){
+  // power up
+  delay(10);
+  digitalWrite(8,HIGH);
+  delay(200);
 
+  // reset pulse
+  digitalWrite(8,LOW);
+  delayMicroseconds(15);
+  digitalWrite(8, HIGH);
+  delay(200);
+
+  ADS.SDATAC();
+  ADS.WREG(CONFIG3, 0xE0);
+  ADS.WREG(CONFIG1, 0x96);
+  ADS.WREG(CONFIG2, 0xC0);
+  ADS.WREG(CH1SET, 0x01);
+  ADS.WREG(CH2SET, 0x01);
+  ADS.WREG(CH3SET, 0x01);
+  ADS.WREG(CH4SET, 0x01);
+  delayMicroseconds(5);
+  ADS.RDATAC();
+
+  
+}
+
+void setup() {
+  pinMode(8, OUTPUT);
   Serial.begin(115200);
   Serial.println();
   Serial.println("ADS1299-bridge has started!");
   
   ADS.setup(9, 10); // (DRDY pin, CS pin);
   delay(10);  //delay to ensure connection
-  
-  ADS.RESET();
+  ADS_startup();
+  //ADS.RESET();
+  ADS.SDATAC();
+  ADS.WREG(CONFIG3, 0b11100000);
+  delay(10);
+  ADS.WREG(CONFIG1, 0x96);
+  ADS.WREG(CONFIG2, 0xC0);
+  ADS.WREG(CH1SET, 0x01);
+  ADS.WREG(CH2SET, 0x01);
+  ADS.WREG(CH3SET, 0x01);
+  ADS.WREG(CH4SET, 0x01);
+  ADS.RDATAC();
+
 }
 
 void loop(){
@@ -64,19 +101,22 @@ void loop(){
     
     //Write register command (see Datasheet pg. 38 for more info about WREG)
     ADS.WREG(CONFIG1, 0b11010110);
+    ADS.WREG(GPIO, 0b00000000);
+    
     Serial.println("----------------------------------------------");
     
     //Repeat PRINT ALL REGISTERS to verify that WREG changed the CONFIG1 register
     ADS.RREG(0x00, 0x17);
     Serial.println("----------------------------------------------");
-    
+    delay(2000);
     //Start data conversions command
     ADS.START(); //must start before reading data continuous
+    delay(1);
     deviceIDReturned = true;
   }
   
   //print data to the serial console for only the 1st 10seconds of 
-  while(millis()<10000){
+  while(1){
     if(startedLogging == false){
       Serial.print("Millis: "); //this is to see at what time the data starts printing to check for timing accuracy (default sample rate is 250 sample/second)
       Serial.println(millis());
