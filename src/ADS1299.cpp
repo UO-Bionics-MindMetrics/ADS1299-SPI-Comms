@@ -221,12 +221,13 @@ void ADS1299::RDATA_update(){
         for(int i = 0; i<9; i++){
             for(int j = 0; j<3; j++){
                 byte dataByte = transfer(0x00);
-                dataPacket = (dataPacket<<8) | dataByte;
+                dataPacket = (dataPacket<<8) | dataByte; // constructing the 24 bit binary
             }
 //            output[outputCount][i] = dataPacket;
             output[i] = dataPacket;
             dataPacket = 0;
         }
+        
         digitalWrite(CS, HIGH);
         //Serial.print(outputCount);
         //Serial.print("\t");
@@ -280,16 +281,32 @@ void ADS1299::STARTUP(){
 void ADS1299::init_ADS_4(){
     WREG(CONFIG1, 0b11010110);
     WREG(CONFIG2, 0b11000000);
+    WREG(CONFIG3, 0b11101100);
+    // 0b01100101 - test signal
+    // 0b01100000 - normal operation
+    WREG(CH1SET, 0b01101000);
+    WREG(CH2SET, 0b11100001);
+    WREG(CH3SET, 0b11100001);
+    WREG(CH4SET, 0b11100001);
+    WREG(BIAS_SENSP, 0b00001111);
+    WREG(BIAS_SENSN, 0b00001111);
+    WREG(GPIO, 0b00000000);
+
+}
+// Square sine wave test
+void ADS1299::init_ADS_4_test(){
+    WREG(CONFIG1, 0b11010110);
+    WREG(CONFIG2, 0b11010000);
+    WREG(CONFIG3, 0b11101100);
     // 0b01100101 - test signal
     // 0b01100000 - normal operation
     WREG(CH1SET, 0b01100101);
     WREG(CH2SET, 0b01100101);
     WREG(CH3SET, 0b01100101);
     WREG(CH4SET, 0b01100101);
-    WREG(BIAS_SENSP, 0b00000000);
-    WREG(BIAS_SENSN, 0b00000000);
+    WREG(BIAS_SENSP, 0b00001111);
+    WREG(BIAS_SENSN, 0b00001111);
     WREG(GPIO, 0b00000000);
-
 }
 
 void ADS1299::init_ADS_8(){

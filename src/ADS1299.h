@@ -46,7 +46,7 @@ public:
     void STARTUP(); // Startup youtine
     void init_ADS_4();// initialize configs for 4 channel version
     void init_ADS_8();// initialize configs for 8 channel version
-    
+    void init_ADS_4_test();
     //SPI Arduino Library Stuff
     byte transfer(byte _data);
     

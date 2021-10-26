@@ -26,7 +26,8 @@ void setup() {
   ADS.setup(9, 10, 8); // (DRDY pin, CS pin, RESET pin);
   delay(10);  //delay to ensure connection
   ADS.STARTUP();
-  ADS.init_ADS_4();
+  //ADS.init_ADS_4();
+  ADS.init_ADS_4_test(); // square sine wave test
 
 }
 
