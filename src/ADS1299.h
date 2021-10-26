@@ -2,7 +2,7 @@
 //  ADS1299.h
 //  
 //  Created by Conor Russomanno on 6/17/13.
-//
+//  Modified by UOBionics 2021
 
 #ifndef ADS1299_h
 #define ADS1299_h
@@ -16,7 +16,7 @@
 class ADS1299 {
 public:
     
-    void setup(int _DRDY, int _CS);
+    void setup(int _DRDY, int _CS, int RESET_pin);
     
     //ADS1299 SPI Command Definitions (Datasheet, Pg. 35)
     //System Commands
@@ -41,27 +41,20 @@ public:
     void WREG(byte _address, byte _value); //
     void WREG(byte _address, byte _value, byte _numRegistersMinusOne); //
     
-    void updateData();
+    void updateData(); // RDATAC
+    void RDATA_update(); // RDATA
+    void STARTUP(); // Startup youtine
+    void init_ADS_4();// initialize configs for 4 channel version
+    void init_ADS_8();// initialize configs for 8 channel version
     
     //SPI Arduino Library Stuff
     byte transfer(byte _data);
-
-    //------------------------//
-    void attachInterrupt();
-    void detachInterrupt(); // Default
-    void begin(); // Default
-    void end();
-    void setBitOrder(uint8_t);
-    void setDataMode(uint8_t);
-    void setClockDivider(uint8_t);
-    //------------------------//
     
     float tCLK;
     int DRDY, CS; //pin numbers for "Data Ready" (DRDY) and "Chip Select" CS (Datasheet, pg. 26)
-    
+    int RESET_Pin;
     int outputCount;
     
-//    vector<String> registers;
     
 };
 

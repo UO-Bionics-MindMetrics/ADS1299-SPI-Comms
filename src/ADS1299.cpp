@@ -2,13 +2,13 @@
 //  ADS1299.cpp
 //  
 //  Created by Conor Russomanno on 6/17/13.
-//
+//  Modified by UOBionics 2021
 
 
 #include "pins_arduino.h"
 #include "ADS1299.h"
 
-void ADS1299::setup(int _DRDY, int _CS){
+void ADS1299::setup(int _DRDY, int _CS, int RESET_pin){
     
     // **** ----- SPI Setup ----- **** //
     
@@ -47,8 +47,10 @@ void ADS1299::setup(int _DRDY, int _CS){
     // initalize the  data ready and chip select pins:
     DRDY = _DRDY;
     CS = _CS;
+    RESET_Pin = RESET_pin;
     pinMode(DRDY, INPUT);
     pinMode(CS, OUTPUT);
+    pinMode(RESET_Pin, OUTPUT);
     
     tCLK = 0.000666; //666 ns (Datasheet, pg. 8)
     outputCount = 0;
@@ -177,10 +179,6 @@ void ADS1299::WREG(byte _address, byte _value) {
     Serial.print(_address, HEX);
     Serial.println(" modified.");
 }
-//
-//void ADS1299::WREG(byte _address, byte _value, byte _numRegistersMinusOne) {
-//    
-//}
 
 void ADS1299::updateData(){
     if(digitalRead(DRDY) == LOW){
@@ -208,6 +206,94 @@ void ADS1299::updateData(){
         Serial.println();
         outputCount++;
     }
+}
+
+void ADS1299::RDATA_update(){
+    if(digitalRead(DRDY) == LOW){
+        //DRDY debug
+        //Serial.println("LOW");
+        digitalWrite(CS, LOW);
+        // RDATA command - ONLY DIFFERENCE BETWEEN THIS FUNC AND THE updateDATA()
+        transfer(_RDATA);
+//        long output[100][9];
+        long output[9];
+        long dataPacket;
+        for(int i = 0; i<9; i++){
+            for(int j = 0; j<3; j++){
+                byte dataByte = transfer(0x00);
+                dataPacket = (dataPacket<<8) | dataByte;
+            }
+//            output[outputCount][i] = dataPacket;
+            output[i] = dataPacket;
+            dataPacket = 0;
+        }
+        digitalWrite(CS, HIGH);
+        //Serial.print(outputCount);
+        //Serial.print("\t");
+        // changed to get data from 4 channels of ads1299-4
+        // i=0;i<9 was original
+        for (int i=1;i<5; i++) {
+            Serial.print(output[i]);
+            //Serial.print(output[i], HEX);
+            if(i!=4) Serial.print("\t");
+            
+        }
+        Serial.println();
+        //outputCount++;
+    }
+}
+// Working startup routine
+void ADS1299::STARTUP(){
+    // using the RESET pin to pull high or low instead of the command (not sure if the command works, still needs to test)
+    // power up
+    delay(10);
+    digitalWrite(RESET_Pin,HIGH);
+    delay(200);
+
+    // reset pulse
+    digitalWrite(RESET_Pin,LOW);
+    delayMicroseconds(15);
+    digitalWrite(RESET_Pin, HIGH);
+    delay(200);
+
+    SDATAC();
+    WREG(CONFIG3, 0xE0);
+    WREG(CONFIG1, 0x96);
+    WREG(CONFIG2, 0xC0);
+    WREG(CH1SET, 0x01);
+    WREG(CH2SET, 0x01);
+    WREG(CH3SET, 0x01);
+    WREG(CH4SET, 0x01);
+    delayMicroseconds(5);
+    RDATAC();
+    SDATAC();
+    WREG(CONFIG3, 0b11100000);
+    delay(10);
+    WREG(CONFIG1, 0x96);
+    WREG(CONFIG2, 0xC0);
+    WREG(CH1SET, 0x01);
+    WREG(CH2SET, 0x01);
+    WREG(CH3SET, 0x01);
+    WREG(CH4SET, 0x01);
+    RDATAC();
+}
+void ADS1299::init_ADS_4(){
+    WREG(CONFIG1, 0b11010110);
+    WREG(CONFIG2, 0b11000000);
+    // 0b01100101 - test signal
+    // 0b01100000 - normal operation
+    WREG(CH1SET, 0b01100101);
+    WREG(CH2SET, 0b01100101);
+    WREG(CH3SET, 0b01100101);
+    WREG(CH4SET, 0b01100101);
+    WREG(BIAS_SENSP, 0b00000000);
+    WREG(BIAS_SENSN, 0b00000000);
+    WREG(GPIO, 0b00000000);
+
+}
+
+void ADS1299::init_ADS_8(){
+
 }
 
 // String-Byte converters for RREG and WREG
@@ -293,63 +379,3 @@ byte ADS1299::transfer(byte _data) {
         ;
     return SPDR;
 }
-
-//-------------------------------------------------------------------//
-//-------------------------------------------------------------------//
-//-------------------------------------------------------------------//
-
-////UNNECESSARY SPI-ARDUINO METHODS
-//void ADS1299::attachInterrupt() {
-//    SPCR |= _BV(SPIE);
-//}
-//
-//void ADS1299::detachInterrupt() {
-//    SPCR &= ~_BV(SPIE);
-//}
-//
-//void ADS1299::begin() {
-//    // Set direction register for SCK and MOSI pin.
-//    // MISO pin automatically overrides to INPUT.
-//    // When the SS pin is set as OUTPUT, it can be used as
-//    // a general purpose output port (it doesn't influence
-//    // SPI operations).
-//
-//    pinMode(SCK, OUTPUT);
-//    pinMode(MOSI, OUTPUT);
-//    pinMode(SS, OUTPUT);
-//
-//    digitalWrite(SCK, LOW);
-//    digitalWrite(MOSI, LOW);
-//    digitalWrite(SS, HIGH);
-//
-//    // Warning: if the SS pin ever becomes a LOW INPUT then SPI
-//    // automatically switches to Slave, so the data direction of
-//    // the SS pin MUST be kept as OUTPUT.
-//    SPCR |= _BV(MSTR);
-//    SPCR |= _BV(SPE);
-//}
-//
-//void ADS1299::end() {
-//    SPCR &= ~_BV(SPE);
-//}
-//
-////void ADS1299::setBitOrder(uint8_t bitOrder)
-////{
-////    if(bitOrder == LSBFIRST) {
-////        SPCR |= _BV(DORD);
-////    } else {
-////        SPCR &= ~(_BV(DORD));
-////    }
-////}
-////
-////void ADS1299::setDataMode(uint8_t mode)
-////{
-////    SPCR = (SPCR & ~SPI_MODE_MASK) | mode;
-////}
-////
-////void ADS1299::setClockDivider(uint8_t rate)
-////{
-////    SPCR = (SPCR & ~SPI_CLOCK_MASK) | (rate & SPI_CLOCK_MASK);
-////    SPSR = (SPSR & ~SPI_2XCLOCK_MASK) | ((rate >> 2) & SPI_2XCLOCK_MASK);
-//}
-
