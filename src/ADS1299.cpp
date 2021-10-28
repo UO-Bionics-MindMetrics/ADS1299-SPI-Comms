@@ -196,15 +196,23 @@ void ADS1299::updateData(){
             dataPacket = 0;
         }
         digitalWrite(CS, HIGH);
-        Serial.print(outputCount);
-        Serial.print(", ");
-        for (int i=0;i<9; i++) {
-            Serial.print(output[i], HEX);
-            if(i!=8) Serial.print(", ");
+        // conversions to microvolts 
+        double outputvolts[9];
+        for(int i = 0; i < 9; i++){
+            outputvolts[i] = double(output[i])*4.5/12/(pow(2,23)-1);
+        }
+
+        //Serial.print(outputCount);
+        //Serial.print("\t");
+        // changed to get data from 4 channels of ads1299-4
+        // i=0;i<9 was original
+        for (int i=1;i<5; i++) {
+            Serial.print(outputvolts[i]);
+            //Serial.print(output[i], HEX);
+            if(i!=4) Serial.print("\t");
             
         }
         Serial.println();
-        outputCount++;
     }
 }
 
@@ -216,26 +224,42 @@ void ADS1299::RDATA_update(){
         // RDATA command - ONLY DIFFERENCE BETWEEN THIS FUNC AND THE updateDATA()
         transfer(_RDATA);
 //        long output[100][9];
-        long output[9];
-        long dataPacket;
+        signed long output[9];
+        uint32_t dataPacket;
         for(int i = 0; i<9; i++){
             for(int j = 0; j<3; j++){
                 byte dataByte = transfer(0x00);
                 dataPacket = (dataPacket<<8) | dataByte; // constructing the 24 bit binary
             }
-//            output[outputCount][i] = dataPacket;
+            // ------------------ Testing twos complement --------------- 
+            // not in use right now, not necessary for now
+            /*
+            // 2 complement
+            bool negative = (dataPacket & (1 << 23)) != 0;
+            if (negative)
+                output[i] = dataPacket| ~((1 << 24) - 1);
+            else
+                output[i] = dataPacket;
+            */
+
             output[i] = dataPacket;
             dataPacket = 0;
         }
         
         digitalWrite(CS, HIGH);
+        // conversions to microvolts 
+        double outputvolts[9];
+        for(int i = 0; i < 9; i++){
+            outputvolts[i] = double(output[i])*4.5/24/(pow(2,23)-1);
+        }
+
         //Serial.print(outputCount);
         //Serial.print("\t");
         // changed to get data from 4 channels of ads1299-4
         // i=0;i<9 was original
         for (int i=1;i<5; i++) {
-            Serial.print(output[i]);
-            //Serial.print(output[i], HEX);
+            Serial.print(outputvolts[i]);
+            //Serial.print(output[i]);
             if(i!=4) Serial.print("\t");
             
         }
@@ -249,13 +273,13 @@ void ADS1299::STARTUP(){
     // power up
     delay(10);
     digitalWrite(RESET_Pin,HIGH);
-    delay(200);
+    delay(250);
 
     // reset pulse
     digitalWrite(RESET_Pin,LOW);
     delayMicroseconds(15);
     digitalWrite(RESET_Pin, HIGH);
-    delay(200);
+    delay(250);
 
     SDATAC();
     WREG(CONFIG3, 0xE0);
@@ -265,7 +289,7 @@ void ADS1299::STARTUP(){
     WREG(CH2SET, 0x01);
     WREG(CH3SET, 0x01);
     WREG(CH4SET, 0x01);
-    delayMicroseconds(5);
+    delayMicroseconds(15);
     RDATAC();
     SDATAC();
     WREG(CONFIG3, 0b11100000);
@@ -281,23 +305,24 @@ void ADS1299::STARTUP(){
 void ADS1299::init_ADS_4(){
     WREG(CONFIG1, 0b11010110);
     WREG(CONFIG2, 0b11000000);
-    WREG(CONFIG3, 0b11101100);
+    WREG(CONFIG3, 0b11100100);
     // 0b01100101 - test signal
     // 0b01100000 - normal operation
-    WREG(CH1SET, 0b01101000);
-    WREG(CH2SET, 0b11100001);
-    WREG(CH3SET, 0b11100001);
-    WREG(CH4SET, 0b11100001);
-    WREG(BIAS_SENSP, 0b00001111);
-    WREG(BIAS_SENSN, 0b00001111);
+    WREG(CH1SET, 0b01100000);
+    WREG(CH2SET, 0b01100000);
+    WREG(CH3SET, 0b01100000);
+    WREG(CH4SET, 0b01100000);
+    WREG(BIAS_SENSP, 0b00000000);
+    WREG(BIAS_SENSN, 0b00000000);
     WREG(GPIO, 0b00000000);
+    WREG(MISC1, 0b00100000);
 
 }
 // Square sine wave test
 void ADS1299::init_ADS_4_test(){
     WREG(CONFIG1, 0b11010110);
     WREG(CONFIG2, 0b11010000);
-    WREG(CONFIG3, 0b11101100);
+    WREG(CONFIG3, 0b11101000);
     // 0b01100101 - test signal
     // 0b01100000 - normal operation
     WREG(CH1SET, 0b01100101);

@@ -53,6 +53,7 @@ public:
     float tCLK;
     int DRDY, CS; //pin numbers for "Data Ready" (DRDY) and "Chip Select" CS (Datasheet, pg. 26)
     int RESET_Pin;
+    float VREF;
     int outputCount;
     
     
