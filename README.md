@@ -1,1 +1,1 @@
-ADS1299 SPI Communications
+# ARCHIVED: newer version is available
